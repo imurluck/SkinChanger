@@ -1,4 +1,5 @@
 /build
+
 #测试文件
-/src/androidTest
-/src/test
+src/androidTest
+src/test
