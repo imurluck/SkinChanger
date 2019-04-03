@@ -5,7 +5,11 @@ import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.TypedValue
-
+/**
+ * 获取资源的工具类文件
+ * create by zzx
+ * create at 19-4-3
+ */
 /**
  * 根据resourcesId获取Color
  */

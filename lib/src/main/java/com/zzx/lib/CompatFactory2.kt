@@ -3,12 +3,16 @@ package com.zzx.lib
 import android.content.Context
 import android.text.TextUtils
 import android.util.AttributeSet
-import android.util.Log
 import android.view.LayoutInflater.Factory2
 import android.view.View
 import androidx.appcompat.app.AppCompatDelegate
 import com.zzx.lib.SkinObject.AttrItem
-
+/**
+ * 自定义的Factory2类,用来判断收集需要修改皮肤的view
+ * [delegate] 代理，不影响系统的逻辑，用之来真正的创建view
+ * create by zzx
+ * create at 19-4-3
+ */
 class CompatFactory2(private val delegate: AppCompatDelegate): Factory2 {
 
     override fun onCreateView(name: String?, context: Context, attrs: AttributeSet): View? {

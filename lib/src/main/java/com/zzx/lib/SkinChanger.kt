@@ -1,16 +1,17 @@
 package com.zzx.lib
 
 import android.app.Application
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.AssetManager
 import android.content.res.Resources
+import android.text.TextUtils
+import android.util.Log
 import android.widget.TextView
 import com.zzx.lib.exectors.SkinExecutor
 import com.zzx.lib.extensions.getCompatColor
 import com.zzx.lib.extensions.getCompatDrawable
-import java.io.File
-import java.io.FileOutputStream
 import java.io.InputStream
 /**
  *
@@ -19,11 +20,12 @@ import java.io.InputStream
  */
 object SkinChanger {
 
-    private const val SKIN_CACHE_DIR = "SkinCacheDir"
-    private lateinit var skinCacheDir: File
+    private const val TAG = "SkinChanger"
 
     private lateinit var application: Application
     private val contextMap: MutableMap<Context, MutableList<SkinObject>> = hashMapOf()
+
+    private val resourcesProvider = ResourcesProvider()
 
     private lateinit var skinResources: Resources
     private lateinit var skinPackageName: String
@@ -56,9 +58,8 @@ object SkinChanger {
     /**
      * 加载外部外部资源文件
      * [filePath] 文件路径
-     * [onLoadFinished] 资源加载完成后回调
      */
-    private fun loadResourcesFile(filePath: String, onLoadFinished: () -> Unit) {
+    private fun loadResources(filePath: String) {
         val assetManager = AssetManager::class.java.newInstance()
         val addPathMethod = AssetManager::class.java.getMethod("addAssetPath",
             String::class.java)
@@ -71,37 +72,15 @@ object SkinChanger {
         skinPackageName = application.packageManager
             .getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES)
             .packageName
-        onLoadFinished.invoke()
     }
 
-    /**
-     * 复制asset文件夹下的皮肤包到Cache目录中
-     * [inputStream] 皮肤包的文件流
-     * [cacheFileName] 接下来的过程会将文件流缓存到Cache文件下，[cacheFileName]为缓存的名字
-     * [onLoadFinished] 资源加载完成后回调
-     */
-    private fun loadResourcesAsset(inputStream: InputStream, cacheFileName: String, onLoadFinished: () -> Unit) {
-        SkinExecutor.diskIO.execute {
-            val cacheFile = File(skinCacheDir, cacheFileName)
-            if (cacheFile.exists()) {
-                cacheFile.delete()
-            }
-            val fos = FileOutputStream(cacheFile)
-            val buff = ByteArray(1024)
-            var len: Int
-            while (inputStream.read(buff).apply { len = this} != -1) {
-                fos.write(buff, 0, len)
-            }
-            inputStream.close()
-            fos.close()
-            loadResourcesFile(cacheFile.absolutePath, onLoadFinished)
+    fun change(filePath: String? = resourcesProvider.resourcesFilePath) {
+        if (TextUtils.isEmpty(filePath)) {
+            Log.d(TAG, "loadResources -> resources file path is null, will not change skins")
+            return
         }
-    }
-
-    fun change(filePath: String) {
-        loadResourcesFile(filePath) {
-            changeViewsInMainThread()
-        }
+        loadResources(filePath!!)
+        changeViewsInMainThread()
     }
 
     /**
@@ -110,7 +89,8 @@ object SkinChanger {
      * [cacheFileName] 接下来的过程会将文件流缓存到Cache文件下，[cacheFileName]为缓存的名字
      */
     fun change(inputStream: InputStream, cacheFileName: String) {
-        loadResourcesAsset(inputStream, cacheFileName) {
+        resourcesProvider.installSkinPackage(inputStream, cacheFileName) {
+            loadResources(it)
             changeViewsInMainThread()
         }
     }
@@ -158,12 +138,7 @@ object SkinChanger {
      */
     fun init(application: Application) {
         SkinChanger.application = application
-        val skinCacheDirPath = application.cacheDir.absolutePath +
-                File.separator + SKIN_CACHE_DIR
-        skinCacheDir = File(skinCacheDirPath)
-        if (!skinCacheDir.exists()) {
-            skinCacheDir.mkdirs()
-        }
+        resourcesProvider.config(application)
     }
 
     private var onChangeFinishedListener: () -> Unit = {}
