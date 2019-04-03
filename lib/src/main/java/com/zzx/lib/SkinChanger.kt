@@ -118,6 +118,7 @@ object SkinChanger {
                 val resourcesId = skinResources.getIdentifier(attr.entryName, attr.typeName,
                     skinPackageName
                 )
+                //皮肤包中没有对应的资源，则应该忽略此项属性
                 if (-1 == resourcesId) {
                     continue
                 }

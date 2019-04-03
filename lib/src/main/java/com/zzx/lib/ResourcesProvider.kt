@@ -7,10 +7,17 @@ import com.zzx.lib.exectors.SkinExecutor
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-
+/**
+ * 用于安装皮肤包，包括assets文件夹下的皮肤包，或者从网络上获取皮肤包，
+ * 提供给[SkinChanger]
+ * create by zzx
+ * create at 19-4-3
+ */
 class ResourcesProvider {
 
     private lateinit var skinCacheDir: File
+
+    private lateinit var application: Application
 
     private lateinit var skinPreferences: SharedPreferences
 
@@ -19,6 +26,7 @@ class ResourcesProvider {
      * 初始化配置, 初始化缓存目录，和以设置的皮肤文件路径
      */
     internal fun config(application: Application) {
+        this.application = application
         val skinCacheDirPath = application.cacheDir.absolutePath +
                 File.separator + SKIN_CACHE_DIR
         skinCacheDir = File(skinCacheDirPath)

@@ -14,8 +14,10 @@ import android.util.TypedValue
  * 根据resourcesId获取Color
  */
 internal fun Resources.getCompatColor(context: Context, resourcesId: Int): Int {
-    return if (Build.VERSION.SDK_INT >= 23) getColor(resourcesId, context.theme)
-            else getColor(resourcesId)
+    return when {
+        Build.VERSION.SDK_INT >= 23 -> getColor(resourcesId, context.theme)
+        else -> getColor(resourcesId)
+    }
 }
 
 /**

@@ -41,14 +41,12 @@ class CompatFactory2(private val delegate: AppCompatDelegate): Factory2 {
                 val typeName = context.resources.getResourceTypeName(id)
                 needChangeAttrs.add(AttrItem(attrName, attrValue, entryName, typeName))
             }
-            SkinChanger.collectView(context, SkinObject(view, needChangeAttrs, attrs))
+            SkinChanger.collectView(context, SkinObject(view, needChangeAttrs))
         }
         return view
     }
 
     companion object {
-
-        private const val TAG = "CompatFactory2"
         private const val SKIN_ENABLED_TAG = "skin_enable"
         private const val ID_TAG = "id"
         private const val APP_NAMESPACE = "http://schemas.android.com/apk/res-auto"
