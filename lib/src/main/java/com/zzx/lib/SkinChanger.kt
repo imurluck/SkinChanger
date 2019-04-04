@@ -3,6 +3,7 @@ package com.zzx.lib
 import android.app.Application
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.AssetManager
 import android.content.res.Resources
@@ -13,6 +14,8 @@ import com.zzx.lib.exectors.SkinExecutor
 import com.zzx.lib.extensions.getCompatColor
 import com.zzx.lib.extensions.getCompatDrawable
 import java.io.InputStream
+import java.util.*
+
 /**
  *
  * create by zzx
@@ -20,12 +23,40 @@ import java.io.InputStream
  */
 object SkinChanger {
 
+    /**
+     * 内置颜色换肤
+     */
+    private const val SKIN_CHANGE_TYPE_INTERNAL = 0
+    /**
+     * 外置插件式换肤
+     */
+    private const val SKIN_CHANGE_TYPE_EXTERNAL = 1
+    /**
+     * 不更换皮肤
+     */
+    private const val SKIN_NO_CHANGE = -1
+
+    private const val SKIN_PREFERENCE_FILE_NAME = "skin_preference"
+
+    private const val SKIN_PREFERENCE_CHANGE_TYPE = "skinChangeType"
+
+    private lateinit var skinPreferences: SharedPreferences
+
     private const val TAG = "SkinChanger"
 
     private lateinit var application: Application
     private val contextMap: MutableMap<Context, MutableList<SkinObject>> = hashMapOf()
 
+    private var skinChangeType = SKIN_CHANGE_TYPE_INTERNAL
+    /**
+     * 插件皮肤包提供者，更换皮肤方式为外部插件方式时会使用
+     */
     private val resourcesProvider = ResourcesProvider()
+
+    /**
+     * 主题配置处理器，更换皮肤方式为颜色主题方式时使用
+     */
+    private val themeConfigHandler = ThemeConfigHandler()
 
     private lateinit var skinResources: Resources
     private lateinit var skinPackageName: String
@@ -74,35 +105,66 @@ object SkinChanger {
             .packageName
     }
 
-    fun change(filePath: String? = resourcesProvider.resourcesFilePath) {
+    /**
+     * 此方法应用在Activity启动的时候调用，框架根据皮肤切换的方式自动切换
+     */
+    fun change() {
+        when (skinChangeType) {
+            SKIN_CHANGE_TYPE_INTERNAL -> changeInternal(themeConfigHandler.getThemeConfigProperties() as Map<String, Int>)
+            SKIN_CHANGE_TYPE_EXTERNAL -> changeExternal(resourcesProvider.resourcesFilePath)
+            SKIN_NO_CHANGE -> Log.d(TAG, "will not change skins")
+        }
+    }
+
+    /**
+     * 插件式更换皮肤
+     */
+    fun changeExternal(filePath: String?) {
         if (TextUtils.isEmpty(filePath)) {
             Log.d(TAG, "loadResources -> resources file path is null, will not change skins")
             return
         }
         loadResources(filePath!!)
-        changeViewsInMainThread()
+        changeViewsInMainThreadExternal()
+        skinPreferences.edit().putInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_CHANGE_TYPE_EXTERNAL).commit()
     }
 
     /**
-     * 开始改变皮肤
+     * 开始改变皮肤(插件式更换皮肤)
      * [inputStream] 皮肤包的文件流
      * [cacheFileName] 接下来的过程会将文件流缓存到Cache文件下，[cacheFileName]为缓存的名字
      */
-    fun change(inputStream: InputStream, cacheFileName: String) {
+    fun changeExternal(inputStream: InputStream, cacheFileName: String) {
         resourcesProvider.installSkinPackage(inputStream, cacheFileName) {
-            loadResources(it)
-            changeViewsInMainThread()
+            changeExternal(it)
         }
+    }
+
+    fun changeInternal(themeAttrObject: ThemeAttrObject) {
+        changeInternal(themeAttrObject.getConfig())
+    }
+
+    fun changeInternal(configMap: Map<String, Int>?) {
+        configMap ?: return
+        changeInternal(configMap, true)
+    }
+
+    private fun changeInternal(configMap: Map<String, Int>, update: Boolean) {
+        if (update) {
+            themeConfigHandler.updateConfig(configMap)
+        }
+        changeViewsInMainThreadInternal(configMap)
+        skinPreferences.edit().putInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_CHANGE_TYPE_INTERNAL).commit()
     }
 
     /**
      * 当将皮肤包加载完成后就在主线程中修改所有需要修改的view
      */
-    private fun changeViewsInMainThread() {
+    private fun changeViewsInMainThreadExternal() {
         SkinExecutor.mainThread.execute {
             for (context in contextMap) {
                 for (skinObject in context.value) {
-                    changeSkinObject(skinObject)
+                    changeSkinObjectExternal(skinObject)
                 }
             }
             onChangeFinishedListener.invoke()
@@ -110,16 +172,16 @@ object SkinChanger {
     }
 
     /**
-     * 更换每个页面的View
+     * 更换每个View
      */
-    private fun changeSkinObject(skinObject: SkinObject) {
+    private fun changeSkinObjectExternal(skinObject: SkinObject) {
         skinObject.apply {
-            for (attr in skinObject.needChangeAttrs) {
+            for (attr in needChangeAttrs) {
                 val resourcesId = skinResources.getIdentifier(attr.entryName, attr.typeName,
                     skinPackageName
                 )
                 //皮肤包中没有对应的资源，则应该忽略此项属性
-                if (-1 == resourcesId) {
+                if (0x0 == resourcesId) {
                     continue
                 }
                 when (attr.attrName) {
@@ -135,11 +197,52 @@ object SkinChanger {
     }
 
     /**
+     * 此方法需运行在主线程，更换所有页面
+     */
+    private fun changeViewsInMainThreadInternal(configMap: Map<String, Int>) {
+        for (context in contextMap) {
+            for (skinObject in context.value) {
+                changeSkinObjectInternal(skinObject, configMap)
+            }
+        }
+    }
+
+    /**
+     * 更换单个每个view
+     */
+    private fun changeSkinObjectInternal(skinObject: SkinObject, configMap: Map<String, Int>) {
+        skinObject.apply {
+            for (attr in needChangeAttrs) {
+                when (attr.attrName) {
+                    "background" -> configMap[attr.entryName]?.apply {
+                        view.setBackgroundColor(this)
+                    }
+                    "textColor" -> configMap[attr.entryName]?.apply {
+                        if (view is TextView) {
+                            view.setTextColor(this)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 初始化信息，及创建缓存文件夹
      */
     fun init(application: Application) {
         SkinChanger.application = application
-        resourcesProvider.config(application)
+        skinPreferences = application.getSharedPreferences(SKIN_PREFERENCE_FILE_NAME, Context.MODE_PRIVATE)
+        skinChangeType = skinPreferences.getInt(SKIN_PREFERENCE_CHANGE_TYPE, -SKIN_NO_CHANGE)
+        skinPreferences.registerOnSharedPreferenceChangeListener {
+            preferences, key ->
+            when (key) {
+                SKIN_PREFERENCE_CHANGE_TYPE -> skinChangeType = preferences.getInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_NO_CHANGE)
+            }
+        }
+        resourcesProvider.config(application, skinPreferences)
+        themeConfigHandler.config(application, skinPreferences)
+
     }
 
     private var onChangeFinishedListener: () -> Unit = {}
