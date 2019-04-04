@@ -1,10 +1,14 @@
 package com.zzx.lib.extensions
 
-import android.app.backup.SharedPreferencesBackupHelper
 import android.content.SharedPreferences
 import android.text.TextUtils
 import com.zzx.lib.SkinChanger
-
+/**
+ * SharedPreferences 信息的统一管理类, 包括管理皮肤外置插件的路径、
+ * app主题颜色配置路径、皮肤更换方式等
+ * create by zzx
+ * create at 19-4-4
+ */
 /**
  * {@see ResourcesProvider} 外置皮肤插件路径的存储与获取
  */

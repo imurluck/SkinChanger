@@ -1,7 +1,6 @@
 package com.zzx.lib
 
 import android.app.Application
-import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import com.zzx.lib.exectors.SkinExecutor
 import com.zzx.lib.extensions.getSkinPluginPath

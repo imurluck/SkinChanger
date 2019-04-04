@@ -1,5 +1,10 @@
 package com.zzx.lib
-
+/**
+ * 此类是数据类,保存app主题颜色，用于App内部的主题更换方式(非皮肤插件化式更换)
+ * 此类定义了MaterialDesign风格的基本颜色名称,如需添加新的颜色，需继承此类,并重写[getConfig]方法
+ * create by zzx
+ * create at 19-4-4
+ */
 open class ThemeAttrObject(private val colorPrimary: Int,
                            private val colorPrimaryDark: Int,
                            private val colorPrimaryLight: Int,
@@ -10,7 +15,7 @@ open class ThemeAttrObject(private val colorPrimary: Int,
 
     private val configMap = mutableMapOf<String, Int>()
 
-    fun getConfig(): MutableMap<String, Int> {
+    open fun getConfig(): MutableMap<String, Int> {
         configMap.clear()
         return configMap.apply {
             put(COLOR_PRIMARY, colorPrimary)

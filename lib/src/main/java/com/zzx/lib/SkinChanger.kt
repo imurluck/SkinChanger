@@ -1,7 +1,6 @@
 package com.zzx.lib
 
 import android.app.Application
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -12,9 +11,7 @@ import android.util.Log
 import android.widget.TextView
 import com.zzx.lib.exectors.SkinExecutor
 import com.zzx.lib.extensions.*
-import org.w3c.dom.Text
 import java.io.InputStream
-import java.util.*
 
 /**
  *
