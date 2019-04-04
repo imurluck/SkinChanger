@@ -11,8 +11,8 @@ import android.text.TextUtils
 import android.util.Log
 import android.widget.TextView
 import com.zzx.lib.exectors.SkinExecutor
-import com.zzx.lib.extensions.getCompatColor
-import com.zzx.lib.extensions.getCompatDrawable
+import com.zzx.lib.extensions.*
+import org.w3c.dom.Text
 import java.io.InputStream
 import java.util.*
 
@@ -34,11 +34,9 @@ object SkinChanger {
     /**
      * 不更换皮肤
      */
-    private const val SKIN_NO_CHANGE = -1
+    const val SKIN_NO_CHANGE = -1
 
     private const val SKIN_PREFERENCE_FILE_NAME = "skin_preference"
-
-    private const val SKIN_PREFERENCE_CHANGE_TYPE = "skinChangeType"
 
     private lateinit var skinPreferences: SharedPreferences
 
@@ -126,7 +124,7 @@ object SkinChanger {
         }
         loadResources(filePath!!)
         changeViewsInMainThreadExternal()
-        skinPreferences.edit().putInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_CHANGE_TYPE_EXTERNAL).commit()
+        skinPreferences.putSkinChangeType(SKIN_CHANGE_TYPE_EXTERNAL)
     }
 
     /**
@@ -154,7 +152,7 @@ object SkinChanger {
             themeConfigHandler.updateConfig(configMap)
         }
         changeViewsInMainThreadInternal(configMap)
-        skinPreferences.edit().putInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_CHANGE_TYPE_INTERNAL).commit()
+        skinPreferences.putSkinChangeType(SKIN_CHANGE_TYPE_INTERNAL)
     }
 
     /**
@@ -189,7 +187,9 @@ object SkinChanger {
                         view.background = skinResources.getCompatDrawable(view.context, resourcesId)
                     }
                     "textColor" -> {
-                        (view as TextView).setTextColor(skinResources.getCompatColor(view.context, resourcesId))
+                        if (view is TextView) {
+                            view.setTextColor(skinResources.getCompatColor(view.context, resourcesId))
+                        }
                     }
                 }
             }
@@ -233,12 +233,9 @@ object SkinChanger {
     fun init(application: Application) {
         SkinChanger.application = application
         skinPreferences = application.getSharedPreferences(SKIN_PREFERENCE_FILE_NAME, Context.MODE_PRIVATE)
-        skinChangeType = skinPreferences.getInt(SKIN_PREFERENCE_CHANGE_TYPE, -SKIN_NO_CHANGE)
-        skinPreferences.registerOnSharedPreferenceChangeListener {
-            preferences, key ->
-            when (key) {
-                SKIN_PREFERENCE_CHANGE_TYPE -> skinChangeType = preferences.getInt(SKIN_PREFERENCE_CHANGE_TYPE, SKIN_NO_CHANGE)
-            }
+        skinChangeType = skinPreferences.getSKinChangeType()
+        skinPreferences.onSkinChangeTypeChange {
+            skinChangeType = it
         }
         resourcesProvider.config(application, skinPreferences)
         themeConfigHandler.config(application, skinPreferences)

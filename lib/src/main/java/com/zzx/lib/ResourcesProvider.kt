@@ -4,6 +4,9 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import com.zzx.lib.exectors.SkinExecutor
+import com.zzx.lib.extensions.getSkinPluginPath
+import com.zzx.lib.extensions.onSkinPluginPathChange
+import com.zzx.lib.extensions.putSkinPluginPath
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -34,13 +37,9 @@ class ResourcesProvider {
             skinCacheDir.mkdirs()
         }
         this.skinPreferences = skinPreferences
-        resourcesFilePath = skinPreferences.getString(SKIN_PREFERENCE_PLUGIN_PATH, null)
-        skinPreferences.registerOnSharedPreferenceChangeListener {
-            preferences, key ->
-            when (key) {
-                SKIN_PREFERENCE_PLUGIN_PATH -> resourcesFilePath =
-                    preferences.getString(SKIN_PREFERENCE_PLUGIN_PATH, null)
-            }
+        resourcesFilePath = skinPreferences.getSkinPluginPath()
+        skinPreferences.onSkinPluginPathChange {
+            resourcesFilePath = it
         }
     }
 
@@ -65,7 +64,7 @@ class ResourcesProvider {
             }
             inputStream.close()
             fos.close()
-            skinPreferences.edit().putString(SKIN_PREFERENCE_PLUGIN_PATH, cacheFile.absolutePath).commit()
+            skinPreferences.putSkinPluginPath(cacheFile.absolutePath)
             onInstallFinished.invoke(cacheFile.absolutePath)
         }
     }
@@ -73,6 +72,6 @@ class ResourcesProvider {
     companion object {
         private const val SKIN_CACHE_DIR = "SkinCacheDir"
 
-        private const val SKIN_PREFERENCE_PLUGIN_PATH = "skinPluginPath"
+
     }
 }

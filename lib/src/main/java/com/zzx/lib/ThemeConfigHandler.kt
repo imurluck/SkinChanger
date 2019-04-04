@@ -3,7 +3,9 @@ package com.zzx.lib
 import android.app.Application
 import android.content.SharedPreferences
 import android.text.TextUtils
-import android.util.Log
+import com.zzx.lib.extensions.getSkinThemeConfigPath
+import com.zzx.lib.extensions.onSkinThemeConfigPathChange
+import com.zzx.lib.extensions.putSkinThemeConfigPath
 import java.io.*
 import java.util.*
 
@@ -28,12 +30,9 @@ internal class ThemeConfigHandler {
         if (!skinConfigDir.exists()) {
             skinConfigDir.mkdirs()
         }
-        skinConfigFilePath = skinPreferences.getString(SKIN_PREFERENCE_CONFIG_PATH, null)
-        skinPreferences.registerOnSharedPreferenceChangeListener {
-            preferences, key ->
-            if (TextUtils.equals(key, SKIN_PREFERENCE_CONFIG_PATH)) {
-                skinConfigFilePath = preferences.getString(SKIN_PREFERENCE_CONFIG_PATH, null)
-            }
+        skinConfigFilePath = skinPreferences.getSkinThemeConfigPath()
+        skinPreferences.onSkinThemeConfigPathChange {
+            skinConfigFilePath = it
         }
     }
 
@@ -68,6 +67,7 @@ internal class ThemeConfigHandler {
             }
             val fos = FileOutputStream(skinConfigFilePath)
             store(fos, null)
+            skinPreferences.putSkinThemeConfigPath(skinConfigFilePath!!)
             fos.close()
         }
     }
@@ -76,8 +76,6 @@ internal class ThemeConfigHandler {
         private const val DEFAULT_CONFIG_NAME = "themeConfig.properties"
 
         private const val TAG = "ThemeConfigHandler"
-
-        private const val SKIN_PREFERENCE_CONFIG_PATH = "skinConfigPath"
 
         private const val SKIN_CONFIG_DIR = "SkinConfigDir"
     }
