@@ -3,10 +3,13 @@ package com.zzx.lib
 import android.app.Application
 import android.content.SharedPreferences
 import android.text.TextUtils
+import android.util.Log
+import com.google.gson.Gson
 import com.zzx.lib.extensions.getSkinThemeConfigPath
 import com.zzx.lib.extensions.onSkinThemeConfigPathChange
 import com.zzx.lib.extensions.putSkinThemeConfigPath
 import java.io.*
+import java.lang.Exception
 import java.util.*
 
 /**
@@ -36,44 +39,43 @@ internal class ThemeConfigHandler {
         }
     }
 
-    private var configProperties: Properties? = null
+    internal fun <T: ThemeAttrObject> getThemeConfig(clazz: Class<T>): T? {
+        skinConfigFilePath?.apply {
+            var br: BufferedReader? = null
+            try {
+                br = BufferedReader(FileReader(this))
+                var json = ""
+                while (br.readLine()?.apply {
+                        json += this
+                    } != null)
+                    return Gson().fromJson(json, clazz)
+            } catch (e: Exception) {
+                Log.e(TAG, "getThemeConfig -> ${e.message}")
+            } finally {
+                br?.close()
+            }
 
-    internal fun getThemeConfigProperties(): Properties {
-        val properties = Properties()
-        val isr = InputStreamReader(FileInputStream(File(skinConfigFilePath)), "utf-8")
-        return properties.apply {
-            load(isr)
-            configProperties = this
-            isr.close()
         }
+        Log.e(TAG, "getThemeConfig -> skinConfigFilePath is null")
+        return null
     }
 
-    internal fun updateConfig(configMap: Map<String, Int>) {
+    internal fun updateConfig(themeAttrObject: ThemeAttrObject) {
         if (TextUtils.isEmpty(skinConfigFilePath)) {
-            skinConfigFilePath = skinConfigDir.absolutePath + File.separator + DEFAULT_CONFIG_NAME
+            skinConfigFilePath = skinConfigDir.absolutePath + File.separator + themeAttrObject.name + ".json"
         }
         val configFile = File(skinConfigFilePath)
         //如果此前没有次配置文件，则创建一个新的配置文件
         if (!configFile.exists()) {
             configFile.createNewFile()
         }
-        if (configProperties == null) {
-            configProperties = getThemeConfigProperties()
-        }
-        configProperties?.apply {
-            val keySet = configMap.keys
-            for (key in keySet) {
-                this[key] = configMap[key].toString()
-            }
-            val fos = FileOutputStream(skinConfigFilePath)
-            store(fos, null)
-            skinPreferences.putSkinThemeConfigPath(skinConfigFilePath!!)
-            fos.close()
-        }
+        val fos = FileOutputStream(configFile)
+        fos.write(Gson().toJson(themeAttrObject).toByteArray(Charsets.UTF_8))
+        skinPreferences.putSkinThemeConfigPath(skinConfigFilePath!!)
+        fos.close()
     }
 
     companion object {
-        private const val DEFAULT_CONFIG_NAME = "themeConfig.properties"
 
         private const val TAG = "ThemeConfigHandler"
 

@@ -8,6 +8,7 @@ import android.content.res.AssetManager
 import android.content.res.Resources
 import android.text.TextUtils
 import android.util.Log
+import android.util.TypedValue
 import android.widget.TextView
 import com.zzx.lib.exectors.SkinExecutor
 import com.zzx.lib.extensions.*
@@ -55,6 +56,8 @@ object SkinChanger {
 
     private lateinit var skinResources: Resources
     private lateinit var skinPackageName: String
+
+    val themeAttrClazz = ThemeAttrObject::class.java
 
     /**
      * 收集需要更换皮肤的view， 以单个页面context分组
@@ -105,7 +108,7 @@ object SkinChanger {
      */
     fun change() {
         when (skinChangeType) {
-            SKIN_CHANGE_TYPE_INTERNAL -> changeInternal(themeConfigHandler.getThemeConfigProperties() as Map<String, Int>)
+            SKIN_CHANGE_TYPE_INTERNAL -> changeInternal(themeConfigHandler.getThemeConfig(themeAttrClazz))
             SKIN_CHANGE_TYPE_EXTERNAL -> changeExternal(resourcesProvider.resourcesFilePath)
             SKIN_NO_CHANGE -> Log.d(TAG, "will not change skins")
         }
@@ -135,20 +138,19 @@ object SkinChanger {
         }
     }
 
-    fun changeInternal(themeAttrObject: ThemeAttrObject) {
-        changeInternal(themeAttrObject.getConfig())
+    fun changeInternal(themeAttrObject: ThemeAttrObject?) {
+        changeInternal(themeAttrObject, true)
     }
 
-    fun changeInternal(configMap: Map<String, Int>?) {
-        configMap ?: return
-        changeInternal(configMap, true)
-    }
-
-    private fun changeInternal(configMap: Map<String, Int>, update: Boolean) {
-        if (update) {
-            themeConfigHandler.updateConfig(configMap)
+    private fun changeInternal(themeAttrObject: ThemeAttrObject?, update: Boolean) {
+        if (themeAttrObject == null) {
+            Log.d(TAG, "changeInternal -> themeAttrObject is null, change skins failed")
+            return
         }
-        changeViewsInMainThreadInternal(configMap)
+        if (update) {
+            themeConfigHandler.updateConfig(themeAttrObject)
+        }
+        changeViewsInMainThreadInternal(themeAttrObject.getConfig())
         skinPreferences.putSkinChangeType(SKIN_CHANGE_TYPE_INTERNAL)
     }
 
@@ -172,13 +174,23 @@ object SkinChanger {
     private fun changeSkinObjectExternal(skinObject: SkinObject) {
         skinObject.apply {
             for (attr in needChangeAttrs) {
-                val resourcesId = skinResources.getIdentifier(attr.entryName, attr.typeName,
+                var resourcesId = skinResources.getIdentifier(attr.entryName, attr.typeName,
                     skinPackageName
                 )
                 //皮肤包中没有对应的资源，则应该忽略此项属性
                 if (0x0 == resourcesId) {
                     continue
                 }
+                //暂时没有找到什么好的办法处理type为attr的资源转换(在xml中为例如?attr/colorPrimary的值)
+                //所以不要在xml中定义类似的值
+//                if (TextUtils.equals(attr.typeName, "attr")) {
+//                    val typedValue = TypedValue()
+//                    skinResources.getValue(resourcesId, typedValue, true)
+//                    resourcesId = typedValue.resourceId
+//                }
+//                if (0x0 == resourcesId) {
+//                    continue
+//                }
                 when (attr.attrName) {
                     "background" -> {
                         view.background = skinResources.getCompatDrawable(view.context, resourcesId)

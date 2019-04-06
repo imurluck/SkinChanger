@@ -12,12 +12,24 @@ open class ThemeAttrObject(private val colorPrimary: Int,
                            private val textColorPrimary: Int,
                            private val textColorSecondary: Int,
                            private val dividerColor: Int) {
+    var name = DEFAULT_THEME_NAME
 
-    private val configMap = mutableMapOf<String, Int>()
+    @Transient
+    private var configMap = mutableMapOf<String, Int>()
 
-    open fun getConfig(): MutableMap<String, Int> {
-        configMap.clear()
-        return configMap.apply {
+    internal fun getConfig(): MutableMap<String, Int> {
+        //反序列化时configMap为空，需要重新初始化
+        if (configMap == null) {
+            configMap = mutableMapOf()
+        }
+        if (configMap.isEmpty()) {
+            addConfig()
+        }
+        return configMap
+    }
+
+    open fun addConfig() {
+        configMap.apply {
             put(COLOR_PRIMARY, colorPrimary)
             put(COLOR_PRIMARY_DARK, colorPrimaryDark)
             put(COLOR_PRIMARY_LIGHT, colorPrimaryLight)
@@ -29,6 +41,8 @@ open class ThemeAttrObject(private val colorPrimary: Int,
     }
 
     companion object {
+        const val DEFAULT_THEME_NAME = "defaultTheme"
+
         const val COLOR_PRIMARY = "colorPrimary"
         const val COLOR_PRIMARY_DARK = "colorPrimaryDark"
         const val COLOR_PRIMARY_LIGHT = "colorPrimaryLight"

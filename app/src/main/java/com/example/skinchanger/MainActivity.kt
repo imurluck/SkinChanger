@@ -22,7 +22,8 @@ class MainActivity : SkinActivity() {
         changeColor.setOnClickListener {
 //            SkinChanger.changeExternal(assets.open("skin_plugin.apk"), "skin_plugin.apk")
 
-            SkinChanger.changeInternal(ThemeAttrObject(
+            SkinChanger.changeInternal(
+                ThemeAttrObject(
                 Color.parseColor("#009688"),
                 Color.parseColor("#00796B"),
                 Color.parseColor("#B2DFDB"),
@@ -30,7 +31,8 @@ class MainActivity : SkinActivity() {
                 Color.parseColor("#212121"),
                 Color.parseColor("#757575"),
                 Color.parseColor("#BDBDBD")
-            ))
+            )
+            )
         }
     }
 
